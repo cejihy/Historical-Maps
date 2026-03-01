@@ -581,21 +581,44 @@
             timelineContent.scrollTop = scrollPosition;
         }
         
-        // 辅助函数：更新时间线高亮
-        function updateTimelineHighlight(index) {
+        // 统一的时间线项目点击处理
+        function handleTimelineItemClick(index) {
+            const data = markerData[index];
+            updateTimelineHighlight(index);
+            updateMarkerTitleColors(data.title);
+            data.marker.openPopup();
+        }
+        
+        // 统一的时间线项目数据格式化
+        function formatTimelineItemData(data) {
+            const timeText = data.time < 0 ? `公元前${Math.abs(data.time)}年` : `${data.time}年`;
+            return {
+                timeText: timeText,
+                title: data.title,
+                location: data.location
+            };
+        }
+        
+        // 网页端时间线高亮更新
+        function updateWebTimelineHighlight(index) {
             const allItems = timelineContent.querySelectorAll('.timeline-item');
             allItems.forEach(item => item.classList.remove('timeline-item-active'));
             if (allItems[index]) {
                 allItems[index].classList.add('timeline-item-active');
                 scrollToTimelineItem(allItems[index]);
-                // 平滑移动地图中心到选中的标记点
-                if (markerData[index]) {
-                    map.flyTo(markerData[index].latlng, 5);
-                }
             }
-            
-            // 更新移动端时间线高亮
+        }
+        
+        // 辅助函数：更新时间线高亮
+        function updateTimelineHighlight(index) {
+            // 网页端高亮
+            updateWebTimelineHighlight(index);
+            // 移动端高亮
             updateMobileTimelineHighlight(index);
+            // 平滑移动地图中心到选中的标记点
+            if (markerData[index]) {
+                map.flyTo(markerData[index].latlng, 5);
+            }
         }
         
         // 辅助函数：更新标记标题颜色并将激活的标记点提升到最上层
@@ -689,10 +712,7 @@
             if (timelineItem) {
                 const index = Array.from(timelineContent.children).indexOf(timelineItem);
                 if (index !== -1) {
-                    const data = markerData[index];
-                    updateTimelineHighlight(index);
-                    updateMarkerTitleColors(data.title);
-                    data.marker.openPopup();
+                    handleTimelineItemClick(index);
                 }
             }
         }
@@ -705,14 +725,14 @@
             const fragment = document.createDocumentFragment();
             
             markerData.forEach((data) => {
-                const timeText = data.time < 0 ? `公元前${Math.abs(data.time)}年` : `${data.time}年`;
+                const itemData = formatTimelineItemData(data);
                 
                 const timelineItem = document.createElement('div');
                 timelineItem.className = 'timeline-item';
                 timelineItem.innerHTML = `
-                    <div class="timeline-time">${timeText}</div>
-                    <div class="timeline-title">${data.title}</div>
-                    ${data.location ? `<div style="font-size: 11px; color: #27ae60; margin-top: 2px;">${data.location}</div>` : ''}
+                    <div class="timeline-time">${itemData.timeText}</div>
+                    <div class="timeline-title">${itemData.title}</div>
+                    ${itemData.location ? `<div style="font-size: 11px; color: #27ae60; margin-top: 2px;">${itemData.location}</div>` : ''}
                 `;
                 
                 fragment.appendChild(timelineItem);
@@ -732,20 +752,17 @@
             mobileTimelineBar.innerHTML = '';
             
             markerData.forEach((data, index) => {
-                const timeText = data.time < 0 ? `公元前${Math.abs(data.time)}年` : `${data.time}年`;
+                const itemData = formatTimelineItemData(data);
                 
                 const mobileItem = document.createElement('div');
                 mobileItem.className = 'mobile-timeline-item';
-                mobileItem.textContent = `${timeText}: ${data.title}`;
+                mobileItem.textContent = `${itemData.timeText}: ${itemData.title}`;
                 mobileItem.dataset.index = index;
                 
                 // 添加点击事件
                 mobileItem.addEventListener('click', function() {
                     const index = parseInt(this.dataset.index);
-                    const data = markerData[index];
-                    updateTimelineHighlight(index);
-                    updateMarkerTitleColors(data.title);
-                    data.marker.openPopup();
+                    handleTimelineItemClick(index);
                 });
                 
                 mobileTimelineBar.appendChild(mobileItem);
