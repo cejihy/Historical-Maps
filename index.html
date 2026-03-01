@@ -357,6 +357,7 @@
         <input type="file" id="fileInput" class="file-input" accept=".json" onchange="importJSONData(event)">
         <div style="margin-top: 10px;">
             <button class="import-btn" onclick="toggleTitleMode()" id="titleModeBtn">只显示选中标题</button>
+            <button class="import-btn" onclick="toggleLineMode()" id="lineModeBtn" style="margin-left: 5px;">保留连线</button>
         </div>
     </div>
     
@@ -381,6 +382,7 @@
     <!-- 移动端悬浮按钮 -->
     <div class="mobile-floating-buttons">
         <button class="floating-btn import-btn" onclick="toggleTitleMode()" id="mobileTitleModeBtn">单独</button>
+        <button class="floating-btn import-btn" onclick="toggleLineMode()" id="mobileLineModeBtn">连线</button>
         <button class="floating-btn next-btn" onclick="goToPreviousMarker()">▲</button>
         <button class="floating-btn next-btn" onclick="goToNextMarker()">▼</button>
     </div>
@@ -414,6 +416,8 @@
         let usedCoordinates = new Set();
         // 标题显示模式：true表示只显示选中标题，false表示显示所有标题
         let titleMode = true;
+        // 连线模式：true表示保留连线，false表示每次清除连线
+        let lineMode = false;
         
         // 初始化标题模式按钮状态
         function initTitleModeButton() {
@@ -441,8 +445,37 @@
             }
         }
         
+        // 初始化连线模式按钮状态
+        function initLineModeButton() {
+            const btn = document.getElementById('lineModeBtn');
+            const mobileBtn = document.getElementById('mobileLineModeBtn');
+            
+            if (lineMode) {
+                if (btn) {
+                    btn.textContent = '清除连线';
+                    btn.style.backgroundColor = '#e74c3c'; // 红色表示清除连线
+                }
+                if (mobileBtn) {
+                    mobileBtn.textContent = '清除';
+                    mobileBtn.style.backgroundColor = '#e74c3c'; // 红色表示清除连线
+                }
+            } else {
+                if (btn) {
+                    btn.textContent = '保留连线';
+                    btn.style.backgroundColor = '#3498db'; // 蓝色表示保留连线
+                }
+                if (mobileBtn) {
+                    mobileBtn.textContent = '连线';
+                    mobileBtn.style.backgroundColor = '#3498db'; // 蓝色表示保留连线
+                }
+            }
+        }
+        
         // 页面加载完成后初始化
-        window.addEventListener('load', initTitleModeButton);
+        window.addEventListener('load', function() {
+            initTitleModeButton();
+            initLineModeButton();
+        });
         
         // 创建标记的通用函数
         function createMarker(latlng, title, description, time, location) {
@@ -577,6 +610,19 @@
             
             // 更新所有标记的标题显示
             updateMarkerTitleColors(activeTitle);
+        }
+        
+        // 切换连线模式
+        function toggleLineMode() {
+            lineMode = !lineMode;
+            
+            // 初始化按钮状态
+            initLineModeButton();
+            
+            // 如果切换到不保留连线模式，立即清除所有连线
+            if (!lineMode) {
+                clearAllLines();
+            }
         }
         
         // 辅助函数：清除所有连线
@@ -727,13 +773,29 @@
                 currentIndex = Array.from(allItems).indexOf(activeItem);
             }
             
-            // 计算下一个索引（循环）
-            const nextIndex = (currentIndex + 1) % markerData.length;
+            // 计算下一个索引（不循环）
+            const nextIndex = currentIndex + 1;
+            
+            // 如果已经到达末尾，仍然导航到最后一个标记，但不创建连线
+            if (nextIndex >= markerData.length) {
+                const lastData = markerData[markerData.length - 1];
+                map.flyTo(lastData.latlng, 5);
+                updateTimelineHighlight(markerData.length - 1);
+                updateMarkerTitleColors(lastData.title);
+                return;
+            }
+            
             const currentData = markerData[currentIndex];
             const nextData = markerData[nextIndex];
             
-            // 清除之前的连线
-            clearAllLines();
+            // 如果不是保留连线模式，清除之前的连线
+            if (!lineMode) {
+                clearAllLines();
+            }
+            
+            // 计算实际的连线数量（每两个元素为一组：连线+标记）
+            const actualLineCount = Math.floor(currentLines.length / 2);
+            const opacity = Math.max(0.3, 1 - (actualLineCount * 0.1)); // 逐渐降低透明度
             
             // 添加连线
             const line = L.polyline([
@@ -742,10 +804,25 @@
             ], {
                 color: '#e74c3c',
                 weight: 3,
-                opacity: 0.8
+                opacity: opacity
             }).addTo(map);
             
             currentLines.push(line);
+            
+            // 只在保留连线模式下添加顺序数字标记
+            if (lineMode) {
+                const lineNumber = actualLineCount + 1;
+                const midpoint = [(currentData.latlng[0] + nextData.latlng[0]) / 2, (currentData.latlng[1] + nextData.latlng[1]) / 2];
+                const numberMarker = L.divIcon({
+                    className: 'line-number-marker',
+                    html: `<div style="background: #e74c3c; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">${lineNumber}</div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                const marker = L.marker(midpoint, {icon: numberMarker}).addTo(map);
+                currentLines.push(marker);
+            }
             
             // 平滑移动地图中心到下一个标记点
             map.flyTo(nextData.latlng, 5);
@@ -772,13 +849,29 @@
                 currentIndex = Array.from(allItems).indexOf(activeItem);
             }
             
-            // 计算上一个索引（循环）
-            const previousIndex = (currentIndex - 1 + markerData.length) % markerData.length;
+            // 计算上一个索引（不循环）
+            const previousIndex = currentIndex - 1;
+            
+            // 如果已经到达开头，仍然导航到第一个标记，但不创建连线
+            if (previousIndex < 0) {
+                const firstData = markerData[0];
+                map.flyTo(firstData.latlng, 5);
+                updateTimelineHighlight(0);
+                updateMarkerTitleColors(firstData.title);
+                return;
+            }
+            
             const currentData = markerData[currentIndex];
             const previousData = markerData[previousIndex];
             
-            // 清除之前的连线
-            clearAllLines();
+            // 如果不是保留连线模式，清除之前的连线
+            if (!lineMode) {
+                clearAllLines();
+            }
+            
+            // 计算实际的连线数量（每两个元素为一组：连线+标记）
+            const actualLineCount = Math.floor(currentLines.length / 2);
+            const opacity = Math.max(0.3, 1 - (actualLineCount * 0.1)); // 逐渐降低透明度
             
             // 添加连线
             const line = L.polyline([
@@ -787,10 +880,25 @@
             ], {
                 color: '#3498db',
                 weight: 3,
-                opacity: 0.8
+                opacity: opacity
             }).addTo(map);
             
             currentLines.push(line);
+            
+            // 只在保留连线模式下添加顺序数字标记
+            if (lineMode) {
+                const lineNumber = actualLineCount + 1;
+                const midpoint = [(currentData.latlng[0] + previousData.latlng[0]) / 2, (currentData.latlng[1] + previousData.latlng[1]) / 2];
+                const numberMarker = L.divIcon({
+                    className: 'line-number-marker',
+                    html: `<div style="background: #3498db; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">${lineNumber}</div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                const marker = L.marker(midpoint, {icon: numberMarker}).addTo(map);
+                currentLines.push(marker);
+            }
             
             // 平滑移动地图中心到上一个标记点
             map.flyTo(previousData.latlng, 5);
@@ -847,6 +955,24 @@
             };
             reader.readAsText(file);
         }
+        
+        // 添加键盘事件监听器
+        document.addEventListener('keydown', function(e) {
+            switch(e.key) {
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                    e.preventDefault(); // 阻止默认行为
+                    e.stopPropagation(); // 阻止事件冒泡
+                    goToPreviousMarker();
+                    break;
+                case 'ArrowRight':
+                case 'ArrowDown':
+                    e.preventDefault(); // 阻止默认行为
+                    e.stopPropagation(); // 阻止事件冒泡
+                    goToNextMarker();
+                    break;
+            }
+        });
         
         // 注册Service Worker
         if ('serviceWorker' in navigator) {
