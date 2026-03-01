@@ -1,0 +1,19 @@
+{
+  "name": "历史地图",
+  "short_name": "历史地图",
+  "description": "一个用于可视化历史事件的交互式地图应用",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#3498db",
+  "theme_color": "#3498db",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "orientation": "portrait",
+  "categories": ["education", "history", "maps"]
+}
