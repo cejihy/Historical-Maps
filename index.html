@@ -113,6 +113,42 @@
             flex-direction: column;
         }
         
+        /* 移动端底部横向滚动栏 */
+        .mobile-timeline-bar {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            height: 60px;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            border-radius: 5px;
+            box-sizing: border-box;
+            padding: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .mobile-timeline-item {
+            display: inline-block;
+            padding: 8px 12px;
+            margin-right: 10px;
+            background: #f5f5f5;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        
+        .mobile-timeline-item.active {
+            background: #e3f2fd;
+            color: #2196f3;
+            font-weight: bold;
+        }
+        
         .timeline-header {
             padding: 15px;
             border-bottom: 1px solid #eee;
@@ -343,6 +379,10 @@
                 display: flex;
             }
             
+            .mobile-timeline-bar {
+                display: block;
+            }
+            
             #map {
                 height: 100vh;
             }
@@ -382,6 +422,11 @@
         <button class="floating-btn import-btn" onclick="document.getElementById('fileInput').click()">导入</button>
         <button class="floating-btn import-btn" onclick="toggleTitleMode()" id="mobileTitleModeBtn">单独</button>
         <button class="floating-btn import-btn" onclick="toggleLineMode()" id="mobileLineModeBtn">连线</button>
+    </div>
+    
+    <!-- 移动端底部横向滚动栏 -->
+    <div class="mobile-timeline-bar" id="mobileTimelineBar">
+        <!-- 动态生成时间线项目 -->
     </div>
     
     <!-- 移动端悬浮按钮 -->
@@ -548,6 +593,9 @@
                     map.flyTo(markerData[index].latlng, 5);
                 }
             }
+            
+            // 更新移动端时间线高亮
+            updateMobileTimelineHighlight(index);
         }
         
         // 辅助函数：更新标记标题颜色并将激活的标记点提升到最上层
@@ -671,6 +719,58 @@
             });
             
             timelineContent.appendChild(fragment);
+            
+            // 更新移动端时间线栏
+            updateMobileTimelineBar();
+        }
+        
+        // 更新移动端时间线栏
+        function updateMobileTimelineBar() {
+            const mobileTimelineBar = document.getElementById('mobileTimelineBar');
+            if (!mobileTimelineBar) return;
+            
+            mobileTimelineBar.innerHTML = '';
+            
+            markerData.forEach((data, index) => {
+                const timeText = data.time < 0 ? `公元前${Math.abs(data.time)}年` : `${data.time}年`;
+                
+                const mobileItem = document.createElement('div');
+                mobileItem.className = 'mobile-timeline-item';
+                mobileItem.textContent = `${timeText}: ${data.title}`;
+                mobileItem.dataset.index = index;
+                
+                // 添加点击事件
+                mobileItem.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.index);
+                    const data = markerData[index];
+                    updateTimelineHighlight(index);
+                    updateMarkerTitleColors(data.title);
+                    data.marker.openPopup();
+                });
+                
+                mobileTimelineBar.appendChild(mobileItem);
+            });
+        }
+        
+        // 更新移动端时间线高亮
+        function updateMobileTimelineHighlight(index) {
+            const mobileTimelineBar = document.getElementById('mobileTimelineBar');
+            if (!mobileTimelineBar) return;
+            
+            const allItems = mobileTimelineBar.querySelectorAll('.mobile-timeline-item');
+            allItems.forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('active');
+                    // 滚动到选中项目，使其居中显示
+                    const barWidth = mobileTimelineBar.clientWidth;
+                    const itemWidth = item.clientWidth;
+                    const itemLeft = item.offsetLeft;
+                    const scrollPosition = itemLeft - (barWidth / 2) + (itemWidth / 2);
+                    mobileTimelineBar.scrollLeft = scrollPosition;
+                } else {
+                    item.classList.remove('active');
+                }
+            });
         }
         
         // 添加时间线容器的点击事件监听器（事件委托）
