@@ -685,46 +685,47 @@
         
         // 辅助函数：更新标记标题颜色并将激活的标记点提升到最上层
         function updateMarkerTitleColors(activeTitle) {
-            const allTooltips = document.querySelectorAll('.clickable-tooltip');
-            allTooltips.forEach(tooltip => {
-                const tooltipTitle = tooltip.getAttribute('data-title');
-                if (tooltipTitle === activeTitle) {
-                    tooltip.style.color = '#2196f3';
-                    tooltip.style.fontWeight = 'bold';
-                    tooltip.style.display = 'block';
-                    // 找到对应的标记并提升到最上层
-                    const markerDataItem = markerData.find(item => item.title === activeTitle);
-                    if (markerDataItem) {
-                        markerDataItem.marker.bringToFront();
-                        // 同时将对应的Tooltip也提升到最上层
-                        const tooltipContainer = tooltip.closest('.leaflet-tooltip');
-                        if (tooltipContainer) {
-                            tooltipContainer.style.zIndex = '10000';
-                            tooltipContainer.style.display = 'block';
-                        }
-                    }
+            markerData.forEach(data => {
+                if (data.title === activeTitle) {
+                    // 激活状态
+                    data.marker.bringToFront();
+                    
+                    // 重新绑定Tooltip以确保位置正确
+                    const tooltipContent = `<span class="clickable-tooltip" data-title="${data.title}" style="color: #2196f3; font-weight: bold;">${data.title}</span>`;
+                    data.marker.bindTooltip(tooltipContent, {
+                        permanent: true,
+                        direction: 'top',
+                        className: 'marker-tooltip',
+                        interactive: true
+                    }).openTooltip();
                 } else {
+                    // 非激活状态
                     if (titleMode) {
                         // 只显示选中标题模式
-                        tooltip.style.display = 'none';
-                        const tooltipContainer = tooltip.closest('.leaflet-tooltip');
-                        if (tooltipContainer) {
-                            tooltipContainer.style.display = 'none';
-                        }
+                        data.marker.closeTooltip();
                     } else {
                         // 显示所有标题模式
-                        tooltip.style.color = '';
-                        tooltip.style.fontWeight = '';
-                        tooltip.style.display = 'block';
-                        // 重置其他标记的Tooltip层级
-                        const tooltipContainer = tooltip.closest('.leaflet-tooltip');
-                        if (tooltipContainer) {
-                            tooltipContainer.style.zIndex = '';
-                            tooltipContainer.style.display = 'block';
-                        }
+                        const tooltipContent = `<span class="clickable-tooltip" data-title="${data.title}">${data.title}</span>`;
+                        data.marker.bindTooltip(tooltipContent, {
+                            permanent: true,
+                            direction: 'top',
+                            className: 'marker-tooltip',
+                            interactive: true
+                        }).openTooltip();
                     }
                 }
             });
+            
+            // 为所有Tooltip添加点击事件
+            setTimeout(() => {
+                const tooltips = document.querySelectorAll('.clickable-tooltip');
+                tooltips.forEach(tooltip => {
+                    // 移除可能存在的旧事件监听器
+                    tooltip.removeEventListener('click', handleTooltipClick);
+                    // 添加新的事件监听器
+                    tooltip.addEventListener('click', handleTooltipClick);
+                });
+            }, 100);
         }
         
         // 切换标题显示模式
@@ -932,16 +933,7 @@
             // 更新时间线
             updateTimeline();
             
-            // 为所有Tooltip添加点击事件
-            setTimeout(() => {
-                const tooltips = document.querySelectorAll('.clickable-tooltip');
-                tooltips.forEach(tooltip => {
-                    // 移除可能存在的旧事件监听器
-                    tooltip.removeEventListener('click', handleTooltipClick);
-                    // 添加新的事件监听器
-                    tooltip.addEventListener('click', handleTooltipClick);
-                });
-            }, 200);
+
         }
         
         // Tooltip点击事件处理（复用函数）
