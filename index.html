@@ -214,20 +214,40 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             font-size: 11px;
             text-align: center;
             padding: 0;
             touch-action: manipulation;
             user-select: none;
+            border: none;
+            cursor: pointer;
         }
         
         .floating-btn.import-btn {
             background: #3498db;
+            color: white;
         }
         
         .floating-btn.next-btn {
-            background: #e74c3c;
+            background: #3498db;
+            color: white;
+        }
+        
+        .floating-btn.import-btn:hover {
+            background: #2980b9;
+        }
+        
+        .floating-btn.next-btn:hover {
+            background: #2980b9;
+        }
+        
+        .floating-btn.import-btn:active {
+            background: #1f618d;
+        }
+        
+        .floating-btn.next-btn:active {
+            background: #1f618d;
         }
         
         /* 响应式设计 */
