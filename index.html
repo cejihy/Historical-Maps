@@ -332,6 +332,9 @@
         <h3>标记管理</h3>
         <button class="import-btn" onclick="document.getElementById('fileInput').click()">导入JSON数据</button>
         <input type="file" id="fileInput" class="file-input" accept=".json" onchange="importJSONData(event)">
+        <div style="margin-top: 10px;">
+            <button class="import-btn" onclick="toggleTitleMode()" id="titleModeBtn">只显示选中标题</button>
+        </div>
     </div>
     
     <div id="map"></div>
@@ -349,6 +352,7 @@
     
     <!-- 移动端悬浮按钮 -->
     <div class="mobile-floating-buttons">
+        <button class="floating-btn import-btn" onclick="toggleTitleMode()" id="mobileTitleModeBtn">标题</button>
         <button class="floating-btn import-btn" onclick="document.getElementById('fileInput').click()">导入</button>
         <button class="floating-btn next-btn" onclick="goToPreviousMarker()">上一个</button>
         <button class="floating-btn next-btn" onclick="goToNextMarker()">下一个</button>
@@ -381,6 +385,37 @@
         let currentLines = [];
         // 存储已使用的坐标，用于检测重复
         let usedCoordinates = new Set();
+        // 标题显示模式：true表示只显示选中标题，false表示显示所有标题
+        let titleMode = true;
+        
+        // 初始化标题模式按钮状态
+        function initTitleModeButton() {
+            const btn = document.getElementById('titleModeBtn');
+            const mobileBtn = document.getElementById('mobileTitleModeBtn');
+            
+            if (titleMode) {
+                if (btn) {
+                    btn.textContent = '只显示选中标题';
+                    btn.style.backgroundColor = '#3498db'; // 蓝色表示只显示选中
+                }
+                if (mobileBtn) {
+                    mobileBtn.textContent = '选中';
+                    mobileBtn.style.backgroundColor = '#3498db'; // 蓝色表示只显示选中
+                }
+            } else {
+                if (btn) {
+                    btn.textContent = '显示所有标题';
+                    btn.style.backgroundColor = '#27ae60'; // 绿色表示显示所有
+                }
+                if (mobileBtn) {
+                    mobileBtn.textContent = '全部';
+                    mobileBtn.style.backgroundColor = '#27ae60'; // 绿色表示显示所有
+                }
+            }
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', initTitleModeButton);
         
         // 创建标记的通用函数
         function createMarker(latlng, title, description, time, location) {
@@ -459,6 +494,7 @@
                 if (tooltipTitle === activeTitle) {
                     tooltip.style.color = '#2196f3';
                     tooltip.style.fontWeight = 'bold';
+                    tooltip.style.display = 'block';
                     // 找到对应的标记并提升到最上层
                     const markerDataItem = markerData.find(item => item.title === activeTitle);
                     if (markerDataItem) {
@@ -467,18 +503,53 @@
                         const tooltipContainer = tooltip.closest('.leaflet-tooltip');
                         if (tooltipContainer) {
                             tooltipContainer.style.zIndex = '10000';
+                            tooltipContainer.style.display = 'block';
                         }
                     }
                 } else {
-                    tooltip.style.color = '';
-                    tooltip.style.fontWeight = '';
-                    // 重置其他标记的Tooltip层级
-                    const tooltipContainer = tooltip.closest('.leaflet-tooltip');
-                    if (tooltipContainer) {
-                        tooltipContainer.style.zIndex = '';
+                    if (titleMode) {
+                        // 只显示选中标题模式
+                        tooltip.style.display = 'none';
+                        const tooltipContainer = tooltip.closest('.leaflet-tooltip');
+                        if (tooltipContainer) {
+                            tooltipContainer.style.display = 'none';
+                        }
+                    } else {
+                        // 显示所有标题模式
+                        tooltip.style.color = '';
+                        tooltip.style.fontWeight = '';
+                        tooltip.style.display = 'block';
+                        // 重置其他标记的Tooltip层级
+                        const tooltipContainer = tooltip.closest('.leaflet-tooltip');
+                        if (tooltipContainer) {
+                            tooltipContainer.style.zIndex = '';
+                            tooltipContainer.style.display = 'block';
+                        }
                     }
                 }
             });
+        }
+        
+        // 切换标题显示模式
+        function toggleTitleMode() {
+            titleMode = !titleMode;
+            
+            // 初始化按钮状态
+            initTitleModeButton();
+            
+            // 找到当前激活的标记
+            const activeItem = document.querySelector('.timeline-item-active');
+            let activeTitle = '';
+            
+            if (activeItem) {
+                const index = Array.from(timelineContent.children).indexOf(activeItem);
+                if (index !== -1 && markerData[index]) {
+                    activeTitle = markerData[index].title;
+                }
+            }
+            
+            // 更新所有标记的标题显示
+            updateMarkerTitleColors(activeTitle);
         }
         
         // 辅助函数：清除所有连线
@@ -730,6 +801,16 @@
                         
                         // 按时间排序并更新标记
                         updateMarkers();
+                        
+                        // 初始化标题显示模式和侧边栏高亮
+                        if (markerData.length > 0) {
+                            // 高亮第一个时间线项目
+                            updateTimelineHighlight(0);
+                            // 初始化标题显示模式
+                            if (titleMode) {
+                                updateMarkerTitleColors(markerData[0].title);
+                            }
+                        }
                     } else {
                         alert('JSON格式错误：需要包含markers数组');
                     }
