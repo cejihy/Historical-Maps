@@ -224,6 +224,8 @@
             top: 20px;
             right: 20px;
             z-index: 1000;
+            flex-direction: column;
+            gap: 10px;
         }
         
         .floating-btn {
@@ -338,7 +340,7 @@
             }
             
             .mobile-import-button {
-                display: block;
+                display: flex;
             }
             
             #map {
@@ -377,12 +379,12 @@
     <!-- 移动端导入按钮 -->
     <div class="mobile-import-button">
         <button class="floating-btn import-btn" onclick="document.getElementById('fileInput').click()">导入</button>
+        <button class="floating-btn import-btn" onclick="toggleTitleMode()" id="mobileTitleModeBtn">单独</button>
+        <button class="floating-btn import-btn" onclick="toggleLineMode()" id="mobileLineModeBtn">连线</button>
     </div>
     
     <!-- 移动端悬浮按钮 -->
     <div class="mobile-floating-buttons">
-        <button class="floating-btn import-btn" onclick="toggleTitleMode()" id="mobileTitleModeBtn">单独</button>
-        <button class="floating-btn import-btn" onclick="toggleLineMode()" id="mobileLineModeBtn">连线</button>
         <button class="floating-btn next-btn" onclick="goToPreviousMarker()">▲</button>
         <button class="floating-btn next-btn" onclick="goToNextMarker()">▼</button>
     </div>
