@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史地图应用</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+        
+        .import-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .import-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        
+        .import-btn:hover {
+            background: #2980b9;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .marker-tooltip {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .clickable-tooltip {
+            cursor: pointer;
+        }
+        
+        .clickable-tooltip:hover {
+            text-decoration: underline;
+            color: #3498db;
+        }
+        
+        .timeline-sidebar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            bottom: 50px;
+            width: 250px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            border-radius: 5px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .timeline-header {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            background: white;
+            border-radius: 5px 5px 0 0;
+            flex-shrink: 0;
+        }
+        
+        .timeline-header h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        #timeline-content {
+            padding: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding: 10px 0 10px 20px;
+            border-left: 2px solid #3498db;
+            margin-bottom: 10px;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #3498db;
+        }
+        
+        .timeline-item:hover {
+            background: #f5f5f5;
+            cursor: pointer;
+        }
+        
+        .timeline-item-active {
+            background: #e3f2fd;
+            border-left-color: #3498db;
+            font-weight: bold;
+        }
+        
+        .timeline-item-active .timeline-title {
+            color: #2196f3;
+        }
+        
+        .next-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 10px 0;
+            font-size: 12px;
+            width: 100%;
+        }
+        
+        .next-btn:hover {
+            background: #2980b9;
+        }
+        
+        .timeline-time {
+            font-weight: bold;
+            color: #e74c3c;
+            font-size: 14px;
+        }
+        
+        .timeline-title {
+            font-size: 13px;
+            margin-top: 3px;
+        }
+
+    </style>
+</head>
+<body>
+
+    
+    <div class="import-panel">
+        <h3>标记管理</h3>
+        <button class="import-btn" onclick="document.getElementById('fileInput').click()">导入JSON数据</button>
+        <input type="file" id="fileInput" class="file-input" accept=".json" onchange="importJSONData(event)">
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="timeline-sidebar">
+        <div class="timeline-header">
+            <h3>时间线</h3>
+            <div style="display: flex; gap: 5px;">
+                <button class="next-btn" onclick="goToPreviousMarker()">上一个</button>
+                <button class="next-btn" onclick="goToNextMarker()">下一个</button>
+            </div>
+        </div>
+        <div id="timeline-content"></div>
+    </div>
+    
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // 初始化地图，以中国为中心，移除缩放控件，限制最小缩放级别
+        const map = L.map('map', {
+            zoomControl: false,
+            worldCopyJump: true,
+            minZoom: 2 // 限制最小缩放级别为2，防止缩得太小
+        }).setView([35.8617, 104.1954], 4);
+        
+        // 点击地图外部时关闭所有弹窗
+        map.on('click', function(e) {
+            map.closePopup();
+        });
+        
+        // 添加OpenStreetMap瓦片图层
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // 存储标记数据的数组，包含标记对象和时间信息
+        let markerData = [];
+        // 存储当前连线的数组
+        let currentLines = [];
+        // 存储已使用的坐标，用于检测重复
+        let usedCoordinates = new Set();
+        
+        // 创建标记的通用函数
+        function createMarker(latlng, title, description, time, location) {
+            // 检查坐标是否重复，如果重复则添加偏移
+            let adjustedLatlng = latlng;
+            const coordKey = latlng.toString();
+            
+            if (usedCoordinates.has(coordKey)) {
+                // 生成随机偏移（范围：-0.003 到 0.003）
+                const offsetLat = (Math.random() * 0.006) - 0.003;
+                const offsetLng = (Math.random() * 0.006) - 0.003;
+                adjustedLatlng = [latlng[0] + offsetLat, latlng[1] + offsetLng];
+            }
+            
+            // 存储调整后的坐标
+            usedCoordinates.add(adjustedLatlng.toString());
+            
+            // 创建小圆点标记
+            const marker = L.circleMarker(adjustedLatlng, {
+                radius: 5, // 半径，控制圆点大小
+                fillColor: '#e74c3c', // 填充颜色
+                color: '#fff', // 边框颜色
+                weight: 1, // 边框宽度
+                opacity: 1, // 透明度
+                fillOpacity: 0.8 // 填充透明度
+            }).addTo(map);
+            
+            // 存储标记数据
+            const data = {
+                marker: marker,
+                title: title,
+                description: description,
+                time: time || 0,
+                location: location,
+                latlng: adjustedLatlng
+            };
+            
+            markerData.push(data);
+        }
+        
+
+        
+        // 缓存DOM元素
+        const timelineContent = document.getElementById('timeline-content');
+        
+        // 辅助函数：滚动到时间线项目
+        function scrollToTimelineItem(item) {
+            const contentHeight = timelineContent.clientHeight;
+            const itemTop = item.offsetTop;
+            const itemHeight = item.offsetHeight;
+            
+            // 计算滚动位置，使项目居中
+            const scrollPosition = itemTop - (contentHeight / 2) + (itemHeight / 2);
+            timelineContent.scrollTop = scrollPosition;
+        }
+        
+        // 辅助函数：更新时间线高亮
+        function updateTimelineHighlight(index) {
+            const allItems = timelineContent.querySelectorAll('.timeline-item');
+            allItems.forEach(item => item.classList.remove('timeline-item-active'));
+            if (allItems[index]) {
+                allItems[index].classList.add('timeline-item-active');
+                scrollToTimelineItem(allItems[index]);
+            }
+        }
+        
+        // 辅助函数：更新标记标题颜色并将激活的标记点提升到最上层
+        function updateMarkerTitleColors(activeTitle) {
+            const allTooltips = document.querySelectorAll('.clickable-tooltip');
+            allTooltips.forEach(tooltip => {
+                const tooltipTitle = tooltip.getAttribute('data-title');
+                if (tooltipTitle === activeTitle) {
+                    tooltip.style.color = '#2196f3';
+                    tooltip.style.fontWeight = 'bold';
+                    // 找到对应的标记并提升到最上层
+                    const markerDataItem = markerData.find(item => item.title === activeTitle);
+                    if (markerDataItem) {
+                        markerDataItem.marker.bringToFront();
+                        // 同时将对应的Tooltip也提升到最上层
+                        const tooltipContainer = tooltip.closest('.leaflet-tooltip');
+                        if (tooltipContainer) {
+                            tooltipContainer.style.zIndex = '10000';
+                        }
+                    }
+                } else {
+                    tooltip.style.color = '';
+                    tooltip.style.fontWeight = '';
+                    // 重置其他标记的Tooltip层级
+                    const tooltipContainer = tooltip.closest('.leaflet-tooltip');
+                    if (tooltipContainer) {
+                        tooltipContainer.style.zIndex = '';
+                    }
+                }
+            });
+        }
+        
+        // 辅助函数：清除所有连线
+        function clearAllLines() {
+            currentLines.forEach(line => map.removeLayer(line));
+            currentLines = [];
+        }
+        
+        // 时间线点击事件处理（事件委托）
+        function handleTimelineClick(e) {
+            const timelineItem = e.target.closest('.timeline-item');
+            if (timelineItem) {
+                const index = Array.from(timelineContent.children).indexOf(timelineItem);
+                if (index !== -1) {
+                    const data = markerData[index];
+                    updateTimelineHighlight(index);
+                    updateMarkerTitleColors(data.title);
+                    data.marker.openPopup();
+                }
+            }
+        }
+        
+        // 更新时间线
+        function updateTimeline() {
+            timelineContent.innerHTML = '';
+            
+            // 使用文档片段减少DOM操作
+            const fragment = document.createDocumentFragment();
+            
+            markerData.forEach((data) => {
+                const timeText = data.time < 0 ? `公元前${Math.abs(data.time)}年` : `${data.time}年`;
+                
+                const timelineItem = document.createElement('div');
+                timelineItem.className = 'timeline-item';
+                timelineItem.innerHTML = `
+                    <div class="timeline-time">${timeText}</div>
+                    <div class="timeline-title">${data.title}</div>
+                    ${data.location ? `<div style="font-size: 11px; color: #27ae60; margin-top: 2px;">${data.location}</div>` : ''}
+                `;
+                
+                fragment.appendChild(timelineItem);
+            });
+            
+            timelineContent.appendChild(fragment);
+        }
+        
+        // 添加时间线容器的点击事件监听器（事件委托）
+        timelineContent.addEventListener('click', handleTimelineClick);
+        
+        // 按时间排序并更新标记编号
+        function updateMarkers() {
+            // 按时间排序
+            markerData.sort((a, b) => a.time - b.time);
+            
+            // 清除所有现有事件监听器
+            markerData.forEach(data => {
+                data.marker.off('popupopen');
+                data.marker.off('popupclose');
+            });
+            
+            // 更新每个标记的弹窗内容和事件监听器
+            markerData.forEach((data) => {
+                const timeText = data.time < 0 ? `公元前${Math.abs(data.time)}年` : `${data.time}年`;
+                const popupContent = `
+                    <b>${data.title}</b><br>
+                    <span style="color: #e74c3c; font-weight: bold;">${timeText}</span><br>
+                    ${data.location ? `<span style="color: #27ae60; font-weight: bold;">${data.location}</span><br>` : ''}
+                    ${data.description || ''}
+                `;
+                
+                // 绑定弹窗
+                data.marker.bindPopup(popupContent);
+                
+                // 添加可点击的Tooltip，显示标题
+                const tooltipContent = `<span class="clickable-tooltip" data-title="${data.title}">${data.title}</span>`;
+                data.marker.bindTooltip(tooltipContent, {
+                    permanent: true, // 永久显示
+                    direction: 'top', // 显示在标记上方
+                    className: 'marker-tooltip',
+                    interactive: true // 允许Tooltip交互
+                }).openTooltip();
+                
+                // 监听弹窗显示事件，隐藏tooltip并清除连线
+                data.marker.on('popupopen', function() {
+                    data.marker.closeTooltip();
+                    clearAllLines();
+                    
+                    // 找到当前标记在markerData中的索引
+                    const currentIndex = markerData.findIndex(item => item.marker === data.marker);
+                    if (currentIndex !== -1) {
+                        updateTimelineHighlight(currentIndex);
+                        updateMarkerTitleColors(data.title);
+                    }
+                });
+                
+                // 监听弹窗关闭事件，显示tooltip
+                data.marker.on('popupclose', function() {
+                    data.marker.openTooltip();
+                });
+            });
+            
+            // 更新时间线
+            updateTimeline();
+            
+            // 为所有Tooltip添加点击事件
+            setTimeout(() => {
+                const tooltips = document.querySelectorAll('.clickable-tooltip');
+                tooltips.forEach(tooltip => {
+                    // 移除可能存在的旧事件监听器
+                    tooltip.removeEventListener('click', handleTooltipClick);
+                    // 添加新的事件监听器
+                    tooltip.addEventListener('click', handleTooltipClick);
+                });
+            }, 200);
+        }
+        
+        // Tooltip点击事件处理（复用函数）
+        function handleTooltipClick(e) {
+            // 阻止事件冒泡，避免触发地图的点击事件
+            e.stopPropagation();
+            
+            const title = this.getAttribute('data-title');
+            // 找到对应的标记并显示弹窗
+            const markerDataItem = markerData.find(item => item.title === title);
+            if (markerDataItem) {
+                clearAllLines();
+                markerDataItem.marker.openPopup();
+            }
+        }
+        
+        // 跳转到下一个标记并创建连线
+        function goToNextMarker() {
+            if (markerData.length <= 1) return;
+            
+            // 关闭所有弹窗
+            map.closePopup();
+            
+            // 找到当前高亮的时间线项目
+            const activeItem = document.querySelector('.timeline-item-active');
+            let currentIndex = 0;
+            
+            if (activeItem) {
+                // 找到当前高亮项目的索引
+                const allItems = document.querySelectorAll('.timeline-item');
+                currentIndex = Array.from(allItems).indexOf(activeItem);
+            }
+            
+            // 计算下一个索引（循环）
+            const nextIndex = (currentIndex + 1) % markerData.length;
+            const currentData = markerData[currentIndex];
+            const nextData = markerData[nextIndex];
+            
+            // 清除之前的连线
+            clearAllLines();
+            
+            // 添加连线
+            const line = L.polyline([
+                currentData.latlng,
+                nextData.latlng
+            ], {
+                color: '#e74c3c',
+                weight: 3,
+                opacity: 0.8
+            }).addTo(map);
+            
+            currentLines.push(line);
+            
+            // 高亮下一个时间线项目
+            updateTimelineHighlight(nextIndex);
+            updateMarkerTitleColors(nextData.title);
+        }
+        
+        // 跳转到上一个标记并创建连线
+        function goToPreviousMarker() {
+            if (markerData.length <= 1) return;
+            
+            // 关闭所有弹窗
+            map.closePopup();
+            
+            // 找到当前高亮的时间线项目
+            const activeItem = document.querySelector('.timeline-item-active');
+            let currentIndex = 0;
+            
+            if (activeItem) {
+                // 找到当前高亮项目的索引
+                const allItems = document.querySelectorAll('.timeline-item');
+                currentIndex = Array.from(allItems).indexOf(activeItem);
+            }
+            
+            // 计算上一个索引（循环）
+            const previousIndex = (currentIndex - 1 + markerData.length) % markerData.length;
+            const currentData = markerData[currentIndex];
+            const previousData = markerData[previousIndex];
+            
+            // 清除之前的连线
+            clearAllLines();
+            
+            // 添加连线
+            const line = L.polyline([
+                currentData.latlng,
+                previousData.latlng
+            ], {
+                color: '#3498db',
+                weight: 3,
+                opacity: 0.8
+            }).addTo(map);
+            
+            currentLines.push(line);
+            
+            // 高亮上一个时间线项目
+            updateTimelineHighlight(previousIndex);
+            updateMarkerTitleColors(previousData.title);
+        }
+        
+        // 导入JSON数据
+        function importJSONData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    // 清除现有标记和连线
+                    markerData.forEach(item => map.removeLayer(item.marker));
+                    currentLines.forEach(line => map.removeLayer(line));
+                    markerData = [];
+                    currentLines = [];
+                    usedCoordinates.clear();
+                    
+                    if (data.markers && Array.isArray(data.markers)) {
+                        data.markers.forEach(markerDataItem => {
+                            if (markerDataItem.title && markerDataItem.latitude && markerDataItem.longitude) {
+                                // 创建标记
+                                const latlng = [markerDataItem.latitude, markerDataItem.longitude];
+                                createMarker(latlng, markerDataItem.title, markerDataItem.description, markerDataItem.time, markerDataItem.location);
+                            }
+                        });
+                        
+                        // 按时间排序并更新标记
+                        updateMarkers();
+                    } else {
+                        alert('JSON格式错误：需要包含markers数组');
+                    }
+                } catch (error) {
+                    alert('JSON文件格式错误：' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>

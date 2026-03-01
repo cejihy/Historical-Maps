@@ -1,0 +1,124 @@
+{
+  "markers": [
+    {
+      "title": "古埃及文明",
+      "description": "尼罗河流域的古埃及文明，金字塔和象形文字的发源地",
+      "time": -3100,
+      "location": "埃及，吉萨",
+      "latitude": 29.9792,
+      "longitude": 31.1342
+    },
+    {
+      "title": "美索不达米亚文明",
+      "description": "两河流域的苏美尔文明，楔形文字和汉谟拉比法典",
+      "time": -3500,
+      "location": "伊拉克，巴格达",
+      "latitude": 32.5027,
+      "longitude": 45.7431
+    },
+    {
+      "title": "印度河文明",
+      "description": "印度河流域的哈拉帕文明，城市规划和排水系统",
+      "time": -2600,
+      "location": "巴基斯坦，哈拉帕",
+      "latitude": 27.3333,
+      "longitude": 68.1667
+    },
+    {
+      "title": "中国夏朝",
+      "description": "中国第一个朝代，青铜器和甲骨文",
+      "time": -2070,
+      "location": "中国，洛阳",
+      "latitude": 34.7466,
+      "longitude": 112.4546
+    },
+    {
+      "title": "古希腊文明",
+      "description": "雅典民主制度和哲学的发源地",
+      "time": -800,
+      "location": "希腊，雅典",
+      "latitude": 37.9838,
+      "longitude": 23.7275
+    },
+    {
+      "title": "罗马帝国",
+      "description": "庞大的罗马帝国，法律和工程的典范",
+      "time": -27,
+      "location": "意大利，罗马",
+      "latitude": 41.9028,
+      "longitude": 12.4964
+    },
+    {
+      "title": "玛雅文明",
+      "description": "中美洲的玛雅文明，数学和天文学成就",
+      "time": 250,
+      "location": "墨西哥，奇琴伊察",
+      "latitude": 17.2208,
+      "longitude": -92.6203
+    },
+    {
+      "title": "大航海时代",
+      "description": "哥伦布发现新大陆，开启全球探索",
+      "time": 1492,
+      "location": "西班牙，巴塞罗那",
+      "latitude": 39.4699,
+      "longitude": -0.3763
+    },
+    {
+      "title": "工业革命",
+      "description": "英国开始的工业革命，蒸汽机的发明",
+      "time": 1760,
+      "location": "英国，伦敦",
+      "latitude": 51.5074,
+      "longitude": -0.1278
+    },
+    {
+      "title": "美国独立",
+      "description": "美国宣布独立，建立美利坚合众国",
+      "time": 1776,
+      "location": "美国，费城",
+      "latitude": 39.9612,
+      "longitude": -75.1667
+    },
+    {
+      "title": "法国大革命",
+      "description": "法国大革命爆发，推翻波旁王朝",
+      "time": 1789,
+      "location": "法国，巴黎",
+      "latitude": 48.8566,
+      "longitude": 2.3522
+    },
+    {
+      "title": "明治维新",
+      "description": "日本明治维新，开始现代化进程",
+      "time": 1868,
+      "location": "日本，东京",
+      "latitude": 35.6762,
+      "longitude": 139.6503
+    },
+    {
+      "title": "第一次世界大战",
+      "description": "第一次世界大战爆发，改变世界格局",
+      "time": 1914,
+      "location": "比利时，布鲁塞尔",
+      "latitude": 50.8503,
+      "longitude": 4.3517
+    },
+    {
+      "title": "第二次世界大战",
+      "description": "第二次世界大战爆发，影响全球",
+      "time": 1939,
+      "location": "德国，柏林",
+      "latitude": 52.5200,
+      "longitude": 13.4050
+    },
+    {
+      "title": "人类登月",
+      "description": "阿波罗11号成功登月，人类首次踏上月球",
+      "time": 1969,
+      "location": "美国，休斯顿",
+      "latitude": 29.5596,
+      "longitude": -95.0830
+    }
+  ]
+}
