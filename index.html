@@ -444,6 +444,10 @@
             if (allItems[index]) {
                 allItems[index].classList.add('timeline-item-active');
                 scrollToTimelineItem(allItems[index]);
+                // 平滑移动地图中心到选中的标记点
+                if (markerData[index]) {
+                    map.flyTo(markerData[index].latlng, 5);
+                }
             }
         }
         
@@ -562,6 +566,9 @@
                     data.marker.closeTooltip();
                     clearAllLines();
                     
+                    // 平滑移动地图中心到当前标记点
+                    map.flyTo(data.latlng, 5);
+                    
                     // 找到当前标记在markerData中的索引
                     const currentIndex = markerData.findIndex(item => item.marker === data.marker);
                     if (currentIndex !== -1) {
@@ -642,6 +649,9 @@
             
             currentLines.push(line);
             
+            // 平滑移动地图中心到下一个标记点
+            map.flyTo(nextData.latlng, 5);
+            
             // 高亮下一个时间线项目
             updateTimelineHighlight(nextIndex);
             updateMarkerTitleColors(nextData.title);
@@ -683,6 +693,9 @@
             }).addTo(map);
             
             currentLines.push(line);
+            
+            // 平滑移动地图中心到上一个标记点
+            map.flyTo(previousData.latlng, 5);
             
             // 高亮上一个时间线项目
             updateTimelineHighlight(previousIndex);
