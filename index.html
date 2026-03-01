@@ -369,6 +369,7 @@
         <div class="timeline-header">
             <h3>时间线</h3>
             <div style="display: flex; gap: 5px;">
+                <button class="next-btn" onclick="goToStartMarker()">回到开始</button>
                 <button class="next-btn" onclick="goToPreviousMarker()">上一个</button>
                 <button class="next-btn" onclick="goToNextMarker()">下一个</button>
             </div>
@@ -385,6 +386,7 @@
     
     <!-- 移动端悬浮按钮 -->
     <div class="mobile-floating-buttons">
+        <button class="floating-btn next-btn" onclick="goToStartMarker()">↺</button>
         <button class="floating-btn next-btn" onclick="goToPreviousMarker()">▲</button>
         <button class="floating-btn next-btn" onclick="goToNextMarker()">▼</button>
     </div>
@@ -910,6 +912,27 @@
             updateMarkerTitleColors(previousData.title);
         }
         
+        // 回到开始标记
+        function goToStartMarker() {
+            if (markerData.length === 0) return;
+            
+            // 关闭所有弹窗
+            map.closePopup();
+            
+            // 如果不是保留连线模式，清除所有连线
+            if (!lineMode) {
+                clearAllLines();
+            }
+            
+            // 导航到第一个标记
+            const firstData = markerData[0];
+            map.flyTo(firstData.latlng, 5);
+            
+            // 高亮第一个时间线项目
+            updateTimelineHighlight(0);
+            updateMarkerTitleColors(firstData.title);
+        }
+        
         // 导入JSON数据
         function importJSONData(event) {
             const file = event.target.files[0];
@@ -961,6 +984,11 @@
         // 添加键盘事件监听器
         document.addEventListener('keydown', function(e) {
             switch(e.key) {
+                case 'Home':
+                    e.preventDefault(); // 阻止默认行为
+                    e.stopPropagation(); // 阻止事件冒泡
+                    goToStartMarker();
+                    break;
                 case 'ArrowLeft':
                 case 'ArrowUp':
                     e.preventDefault(); // 阻止默认行为
