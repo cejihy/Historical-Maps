@@ -281,18 +281,28 @@
             cursor: pointer;
         }
         
-        .floating-btn.import-btn,
+        .floating-btn.import-btn {
+            background: #3498db;
+            color: white;
+        }
+        
         .floating-btn.next-btn {
             background: #3498db;
             color: white;
         }
         
-        .floating-btn.import-btn:hover,
+        .floating-btn.import-btn:hover {
+            background: #2980b9;
+        }
+        
         .floating-btn.next-btn:hover {
             background: #2980b9;
         }
         
-        .floating-btn.import-btn:active,
+        .floating-btn.import-btn:active {
+            background: #1f618d;
+        }
+        
         .floating-btn.next-btn:active {
             background: #1f618d;
         }
@@ -430,55 +440,12 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // 配置对象
-        const config = {
-            map: {
-                center: [35.8617, 104.1954],
-                zoom: 4,
-                minZoom: 2,
-                zoomControl: false,
-                worldCopyJump: true
-            },
-            styles: {
-                tooltip: {
-                    padding: '6px 10px',
-                    fontSize: '14px'
-                },
-                popup: {
-                    fontSize: '14px',
-                    lineHeight: '1.5'
-                },
-                mobile: {
-                    floatingButtons: {
-                        bottom: '90px',
-                        right: '20px',
-                        gap: '10px'
-                    },
-                    importButton: {
-                        top: '20px',
-                        right: '20px',
-                        gap: '10px'
-                    },
-                    timelineBar: {
-                        bottom: '20px',
-                        left: '20px',
-                        right: '20px',
-                        height: '60px',
-                        padding: '10px'
-                    }
-                }
-            },
-            animation: {
-                zoomLevel: 5
-            }
-        };
-        
         // 初始化地图，以中国为中心，移除缩放控件，限制最小缩放级别
         const map = L.map('map', {
-            zoomControl: config.map.zoomControl,
-            worldCopyJump: config.map.worldCopyJump,
-            minZoom: config.map.minZoom
-        }).setView(config.map.center, config.map.zoom);
+            zoomControl: false,
+            worldCopyJump: true,
+            minZoom: 2 // 限制最小缩放级别为2，防止缩得太小
+        }).setView([35.8617, 104.1954], 4);
         
         // 点击地图外部时关闭所有弹窗
         map.on('click', function(e) {
@@ -553,40 +520,11 @@
             }
         }
         
-        // 初始化函数
-        function initApp() {
+        // 页面加载完成后初始化
+        window.addEventListener('load', function() {
             initTitleModeButton();
             initLineModeButton();
-            
-            // 添加时间线容器的点击事件监听器（事件委托）
-            timelineContent.addEventListener('click', handleTimelineClick);
-            
-            // 添加键盘事件监听器
-            document.addEventListener('keydown', function(e) {
-                switch(e.key) {
-                    case 'Home':
-                        e.preventDefault(); // 阻止默认行为
-                        e.stopPropagation(); // 阻止事件冒泡
-                        goToStartMarker();
-                        break;
-                    case 'ArrowLeft':
-                    case 'ArrowUp':
-                        e.preventDefault(); // 阻止默认行为
-                        e.stopPropagation(); // 阻止事件冒泡
-                        goToPreviousMarker();
-                        break;
-                    case 'ArrowRight':
-                    case 'ArrowDown':
-                        e.preventDefault(); // 阻止默认行为
-                        e.stopPropagation(); // 阻止事件冒泡
-                        goToNextMarker();
-                        break;
-                }
-            });
-        }
-        
-        // 页面加载完成后初始化
-        window.addEventListener('load', initApp);
+        });
         
         // 创建标记的通用函数
         function createMarker(latlng, title, description, time, location) {
@@ -678,54 +616,66 @@
             // 移动端高亮
             updateMobileTimelineHighlight(index);
             // 平滑移动地图中心到选中的标记点
-                if (markerData[index]) {
-                    map.flyTo(markerData[index].latlng, config.animation.zoomLevel);
-                }
+            if (markerData[index]) {
+                map.flyTo(markerData[index].latlng, 5);
+            }
         }
         
         // 辅助函数：更新标记标题颜色并将激活的标记点提升到最上层
         function updateMarkerTitleColors(activeTitle) {
+            // 遍历所有标记数据
             markerData.forEach(data => {
                 if (data.title === activeTitle) {
                     // 激活状态
                     data.marker.bringToFront();
+                    // 确保tooltip是打开的并应用高亮样式
+                    data.marker.openTooltip();
                     
-                    // 重新绑定Tooltip以确保位置正确
-                    const tooltipContent = `<span class="clickable-tooltip" data-title="${data.title}" style="color: #2196f3; font-weight: bold;">${data.title}</span>`;
-                    data.marker.bindTooltip(tooltipContent, {
-                        permanent: true,
-                        direction: 'top',
-                        className: 'marker-tooltip',
-                        interactive: true
-                    }).openTooltip();
+                    // 等待tooltip打开后再应用样式和提升层级
+                    setTimeout(() => {
+                        const tooltip = data.marker.getTooltip();
+                        if (tooltip) {
+                            const tooltipContent = tooltip.getElement();
+                            if (tooltipContent) {
+                                const clickableTooltip = tooltipContent.querySelector('.clickable-tooltip');
+                                if (clickableTooltip) {
+                                    clickableTooltip.style.color = '#2196f3';
+                                    clickableTooltip.style.fontWeight = 'bold';
+                                    // 提升tooltip到最上层
+                                    tooltipContent.style.zIndex = '10000';
+                                    tooltipContent.style.position = 'relative';
+                                }
+                            }
+                        }
+                    }, 100);
                 } else {
-                    // 非激活状态
                     if (titleMode) {
                         // 只显示选中标题模式
                         data.marker.closeTooltip();
                     } else {
                         // 显示所有标题模式
-                        const tooltipContent = `<span class="clickable-tooltip" data-title="${data.title}">${data.title}</span>`;
-                        data.marker.bindTooltip(tooltipContent, {
-                            permanent: true,
-                            direction: 'top',
-                            className: 'marker-tooltip',
-                            interactive: true
-                        }).openTooltip();
+                        data.marker.openTooltip();
+                        
+                        // 等待tooltip打开后再应用样式
+                        setTimeout(() => {
+                            const tooltip = data.marker.getTooltip();
+                            if (tooltip) {
+                                const tooltipContent = tooltip.getElement();
+                                if (tooltipContent) {
+                                    const clickableTooltip = tooltipContent.querySelector('.clickable-tooltip');
+                                    if (clickableTooltip) {
+                                        clickableTooltip.style.color = '';
+                                        clickableTooltip.style.fontWeight = '';
+                                        // 重置其他tooltip的层级
+                                        tooltipContent.style.zIndex = '';
+                                        tooltipContent.style.position = '';
+                                    }
+                                }
+                            }
+                        }, 100);
                     }
                 }
             });
-            
-            // 为所有Tooltip添加点击事件
-            setTimeout(() => {
-                const tooltips = document.querySelectorAll('.clickable-tooltip');
-                tooltips.forEach(tooltip => {
-                    // 移除可能存在的旧事件监听器
-                    tooltip.removeEventListener('click', handleTooltipClick);
-                    // 添加新的事件监听器
-                    tooltip.addEventListener('click', handleTooltipClick);
-                });
-            }, 100);
         }
         
         // 切换标题显示模式
@@ -812,11 +762,7 @@
             const mobileTimelineBar = document.getElementById('mobileTimelineBar');
             if (!mobileTimelineBar) return;
             
-            // 清除现有内容
             mobileTimelineBar.innerHTML = '';
-            
-            // 使用文档片段批量更新DOM
-            const fragment = document.createDocumentFragment();
             
             markerData.forEach((data, index) => {
                 const itemData = formatTimelineItemData(data);
@@ -826,30 +772,15 @@
                 mobileItem.textContent = `${itemData.timeText}: ${itemData.title}`;
                 mobileItem.dataset.index = index;
                 
-                fragment.appendChild(mobileItem);
-            });
-            
-            mobileTimelineBar.appendChild(fragment);
-        }
-        
-        // 移动端时间线栏点击事件处理（事件委托）
-        function handleMobileTimelineClick(e) {
-            const mobileItem = e.target.closest('.mobile-timeline-item');
-            if (mobileItem) {
-                const index = parseInt(mobileItem.dataset.index);
-                if (!isNaN(index)) {
+                // 添加点击事件
+                mobileItem.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.index);
                     handleTimelineItemClick(index);
-                }
-            }
+                });
+                
+                mobileTimelineBar.appendChild(mobileItem);
+            });
         }
-        
-        // 添加移动端时间线栏的事件监听器
-        document.addEventListener('DOMContentLoaded', function() {
-            const mobileTimelineBar = document.getElementById('mobileTimelineBar');
-            if (mobileTimelineBar) {
-                mobileTimelineBar.addEventListener('click', handleMobileTimelineClick);
-            }
-        });
         
         // 更新移动端时间线高亮
         function updateMobileTimelineHighlight(index) {
@@ -909,20 +840,20 @@
                 }).openTooltip();
                 
                 // 监听弹窗显示事件，隐藏tooltip并清除连线
-            data.marker.on('popupopen', function() {
-                data.marker.closeTooltip();
-                clearAllLines();
-                
-                // 平滑移动地图中心到当前标记点
-                map.flyTo(data.latlng, config.animation.zoomLevel);
-                
-                // 找到当前标记在markerData中的索引
-                const currentIndex = markerData.findIndex(item => item.marker === data.marker);
-                if (currentIndex !== -1) {
-                    updateTimelineHighlight(currentIndex);
-                    updateMarkerTitleColors(data.title);
-                }
-            });
+                data.marker.on('popupopen', function() {
+                    data.marker.closeTooltip();
+                    clearAllLines();
+                    
+                    // 平滑移动地图中心到当前标记点
+                    map.flyTo(data.latlng, 5);
+                    
+                    // 找到当前标记在markerData中的索引
+                    const currentIndex = markerData.findIndex(item => item.marker === data.marker);
+                    if (currentIndex !== -1) {
+                        updateTimelineHighlight(currentIndex);
+                        updateMarkerTitleColors(data.title);
+                    }
+                });
                 
                 // 监听弹窗关闭事件，显示tooltip
                 data.marker.on('popupclose', function() {
@@ -933,7 +864,16 @@
             // 更新时间线
             updateTimeline();
             
-
+            // 为所有Tooltip添加点击事件
+            setTimeout(() => {
+                const tooltips = document.querySelectorAll('.clickable-tooltip');
+                tooltips.forEach(tooltip => {
+                    // 移除可能存在的旧事件监听器
+                    tooltip.removeEventListener('click', handleTooltipClick);
+                    // 添加新的事件监听器
+                    tooltip.addEventListener('click', handleTooltipClick);
+                });
+            }, 200);
         }
         
         // Tooltip点击事件处理（复用函数）
@@ -1019,7 +959,7 @@
             }
             
             // 平滑移动地图中心到下一个标记点
-            map.flyTo(nextData.latlng, config.animation.zoomLevel);
+            map.flyTo(nextData.latlng, 5);
             
             // 高亮下一个时间线项目
             updateTimelineHighlight(nextIndex);
@@ -1095,7 +1035,7 @@
             }
             
             // 平滑移动地图中心到上一个标记点
-            map.flyTo(previousData.latlng, config.animation.zoomLevel);
+            map.flyTo(previousData.latlng, 5);
             
             // 高亮上一个时间线项目
             updateTimelineHighlight(previousIndex);
@@ -1116,7 +1056,7 @@
             
             // 导航到第一个标记
             const firstData = markerData[0];
-            map.flyTo(firstData.latlng, config.animation.zoomLevel);
+            map.flyTo(firstData.latlng, 5);
             
             // 高亮第一个时间线项目
             updateTimelineHighlight(0);
@@ -1171,7 +1111,28 @@
             reader.readAsText(file);
         }
         
-
+        // 添加键盘事件监听器
+        document.addEventListener('keydown', function(e) {
+            switch(e.key) {
+                case 'Home':
+                    e.preventDefault(); // 阻止默认行为
+                    e.stopPropagation(); // 阻止事件冒泡
+                    goToStartMarker();
+                    break;
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                    e.preventDefault(); // 阻止默认行为
+                    e.stopPropagation(); // 阻止事件冒泡
+                    goToPreviousMarker();
+                    break;
+                case 'ArrowRight':
+                case 'ArrowDown':
+                    e.preventDefault(); // 阻止默认行为
+                    e.stopPropagation(); // 阻止事件冒泡
+                    goToNextMarker();
+                    break;
+            }
+        });
         
         // 注册Service Worker
         if ('serviceWorker' in navigator) {
