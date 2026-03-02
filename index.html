@@ -825,6 +825,15 @@
                     ${data.description || ''}
                 `;
                 
+                // 添加可点击的Tooltip，显示标题
+                const tooltipContent = `<span class="clickable-tooltip" data-title="${data.title}">${data.title}</span>`;
+                data.marker.bindTooltip(tooltipContent, {
+                    permanent: true, // 永久显示
+                    direction: 'top', // 显示在标记上方
+                    className: 'marker-tooltip',
+                    interactive: true // 允许Tooltip交互
+                }).openTooltip();
+                
                 // 监听鼠标点击事件，导航到标记位置并更新详情
                 data.marker.on('click', function() {
                     // 平滑移动地图中心到当前标记点
@@ -862,11 +871,20 @@
             e.stopPropagation();
             
             const title = this.getAttribute('data-title');
-            // 找到对应的标记并显示弹窗
+            // 找到对应的标记并更新详情
             const markerDataItem = markerData.find(item => item.title === title);
             if (markerDataItem) {
-                clearAllLines();
-                markerDataItem.marker.openPopup();
+                // 平滑移动地图中心到当前标记点
+                map.flyTo(markerDataItem.latlng, 5);
+                
+                // 找到当前标记在markerData中的索引
+                const currentIndex = markerData.findIndex(item => item.title === title);
+                if (currentIndex !== -1) {
+                    updateTimelineHighlight(currentIndex);
+                    updateMarkerTitleColors(markerDataItem.title);
+                    // 更新左下角悬浮窗
+                    updateInfoPanel(markerDataItem);
+                }
             }
         }
         
